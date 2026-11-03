@@ -8,9 +8,9 @@ This is **your** console as the platform owner. The seller app (Billaura) is wha
 - Change it immediately under **Settings**
 
 ## What you can do
-- **Dashboard** – total shops, active, trials, MRR
-- **Shops** – add / edit / pause / expire each seller business
-- **Plans** – Free / Basic / Pro (or your own prices in PKR, INR, BDT)
+- **Dashboard** – total shops, active, trials, MRR, plus a **Needs attention** list (pending payments, plans ending in 7 days, trials ending in 3 days, lapsed shops) with one-tap WhatsApp reminders
+- **Shops** – add / edit / pause / expire each seller business; search, filter by status, WhatsApp the owner, export CSV
+- **Plans** – prices plus a table of what each plan unlocks inside the Billaura app (items/invoice limits, PIN lock & staff roles, bulk tools…)
 - **Subscriptions** – see who is paid, trial, expired
 - **Settings** – support contacts, currency, password, export/import
 
@@ -39,3 +39,9 @@ Ask for the Supabase wiring guide when you want to go live.
 ## Hosting tip
 Host Admin on a **private** link or password-protect the folder.
 Do not put the default password on a public page without changing it.
+
+## Installing on your phone
+Open the admin URL in Chrome → menu → *Add to Home screen*. It uses the same red Billaura look and icon as the seller app.
+
+## Keep in sync with the seller app
+The limits shown on the Plans page mirror `js/freemium.js` in Billaura and the `enforce_plan_limit` trigger in `supabase/schema.sql`. If you change one, change all three.

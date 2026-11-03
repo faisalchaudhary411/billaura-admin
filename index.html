@@ -3,10 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#2563EB" />
+  <meta name="theme-color" content="#EF1A3C" />
   <title>Billaura Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="assets/favicon-32.png" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="copyright" content="© Billaura. All rights reserved." />
+  <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="css/admin.css" />
 </head>
 <body>
@@ -15,7 +20,7 @@
     <div id="loginScreen" class="login-screen" hidden>
       <div class="login-card">
         <div class="login-brand">
-          <div class="brand-mark">B</div>
+          <div class="brand-mark"></div>
           <h1>Billaura Admin</h1>
           <p>Platform owner console</p>
         </div>
@@ -38,7 +43,7 @@
     <div id="adminShell" class="admin-shell" hidden>
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-          <div class="brand-mark sm">B</div>
+          <div class="brand-mark sm"></div>
           <div>
             <div class="brand-name">Billaura</div>
             <div class="brand-sub">Admin</div>
@@ -49,7 +54,7 @@
           <button class="nav-link" data-page="shops">Shops</button>
           <button class="nav-link" data-page="plans">Plans</button>
           <button class="nav-link" data-page="subscriptions">Subscriptions</button>
-          <button class="nav-link" data-page="payments">Payments</button>
+          <button class="nav-link" data-page="payments">Payments <span class="dot" id="payDot" hidden></span></button>
           <button class="nav-link" data-page="settings">Settings</button>
         </nav>
         <div class="sidebar-footer">

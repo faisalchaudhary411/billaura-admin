@@ -1,7 +1,7 @@
 :root {
-  --primary: #2563EB;
-  --primary-dark: #1D4ED8;
-  --primary-soft: #DBEAFE;
+  --primary: #EF1A3C;
+  --primary-dark: #C8102E;
+  --primary-soft: #FDE7EB;
   --bg: #F1F5F9;
   --surface: #FFFFFF;
   --text: #0F172A;
@@ -12,7 +12,7 @@
   --warning: #F59E0B;
   --sidebar: #0F172A;
   --radius: 14px;
-  --font: 'Inter', system-ui, sans-serif;
+  --font: Roboto, Inter, system-ui, sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -30,7 +30,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: linear-gradient(145deg, #1E40AF 0%, #1D4ED8 40%, #0F172A 100%);
+  background: linear-gradient(145deg, #EF1A3C 0%, #C8102E 40%, #0F172A 100%);
 }
 .login-card {
   width: 100%;
@@ -43,8 +43,8 @@ body {
 .login-brand { text-align: center; margin-bottom: 28px; }
 .brand-mark {
   width: 56px; height: 56px; margin: 0 auto 12px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: #fff; border-radius: 16px;
+  background: url(../assets/logo.svg) center/cover no-repeat, var(--primary);
+  color: transparent; border-radius: 16px; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   font-weight: 800; font-size: 22px;
 }
@@ -175,7 +175,7 @@ tr:hover td { background: #F8FAFC; }
 .btn:active { transform: scale(0.98); }
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+  color: #fff; box-shadow: 0 4px 12px rgba(239,26,60,0.3);
 }
 .btn-secondary { background: #fff; border: 1px solid var(--border); color: var(--text); }
 .btn-danger { background: #FEE2E2; color: #B91C1C; }
@@ -226,7 +226,7 @@ tr:hover td { background: #F8FAFC; }
   padding: 14px 16px; font-size: 0.85rem; color: #1E3A8A; margin-bottom: 16px;
   line-height: 1.5;
 }
-.note strong { color: #1D4ED8; }
+.note strong { color: #C8102E; }
 
 @media (max-width: 768px) {
   .sidebar {
@@ -240,3 +240,32 @@ tr:hover td { background: #F8FAFC; }
 
 /* The hidden attribute must always win over component display rules */
 [hidden] { display: none !important; }
+
+/* ---- v2 additions ---- */
+.nav-link .dot { float:right; background:var(--primary); color:#fff; border-radius:999px; font-size:.7rem; font-weight:700; padding:1px 8px; }
+.attn { display:flex; flex-direction:column; gap:8px; }
+.attn-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:#fff; }
+.attn-row .t { flex:1; min-width:0; font-size:.88rem; line-height:1.35; }
+.attn-row .t small { display:block; color:var(--muted); }
+.attn-row.warn { border-left:4px solid var(--warning); } .attn-row.bad { border-left:4px solid var(--danger); } .attn-row.info { border-left:4px solid var(--primary); }
+.chips2 { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.chip2 { border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 13px; font-size:.8rem; font-weight:600; color:var(--muted); cursor:pointer; font-family:inherit; }
+.chip2.on { background:var(--primary); border-color:var(--primary); color:#fff; }
+.btn-wa { background:#25D366; color:#fff; border:0; text-decoration:none; display:inline-flex; align-items:center; }
+.limits { width:100%; border-collapse:collapse; font-size:.82rem; }
+.limits th, .limits td { padding:7px 8px; border-bottom:1px solid var(--border); text-align:center; }
+.limits th:first-child, .limits td:first-child { text-align:left; }
+.yes { color:var(--success); font-weight:700; } .no { color:#B8BFCC; }
+.warnbar { background:#FFF4E5; border:1px solid #FFD8A8; color:#8A4B08; border-radius:12px; padding:10px 14px; margin-bottom:14px; font-size:.86rem; }
+.warnbar button { margin-left:8px; }
+
+@media (max-width:700px) {
+  table.shops-t thead { display:none; }
+  table.shops-t, table.shops-t tbody { display:block; }
+  table.shops-t tr { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; padding:12px 4px; border-bottom:1px solid var(--border); }
+  table.shops-t td { display:block; padding:0 !important; border:0 !important; font-size:.84rem; white-space:normal !important; }
+  table.shops-t td:first-child { grid-column:1 / -1; font-size:1rem; }
+  table.shops-t td[data-l]::before { content:attr(data-l); display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-top:4px; }
+  table.shops-t td.acts-td { grid-column:1 / -1; display:flex !important; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  table.shops-t td:nth-child(6) { display:none; }
+}

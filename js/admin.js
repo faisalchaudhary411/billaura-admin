@@ -11,10 +11,17 @@
   };
 
   const DEFAULT_PLANS = [
-    { id: 'free', name: 'Free', price: 0, currency: 'PKR', interval: 'month', shops: 1, features: 'Products, invoices, local data', active: true },
-    { id: 'basic', name: 'Basic', price: 499, currency: 'PKR', interval: 'month', shops: 1, features: 'Everything in Free + backup reminders', active: true },
-    { id: 'pro', name: 'Pro', price: 999, currency: 'PKR', interval: 'month', shops: 3, features: 'Multi-device ready, priority support', active: true },
-    { id: 'lifetime', name: 'Lifetime', price: 14999, currency: 'PKR', interval: 'once', shops: 3, features: 'Pro features forever, one-time payment', active: true }
+    { id: 'free', name: 'Free', price: 0, currency: 'PKR', interval: 'month', shops: 1, features: '25 items, 40 invoices, 20 customers, 30 expenses, 10 suppliers', active: true },
+    { id: 'basic', name: 'Basic', price: 499, currency: 'PKR', interval: 'month', shops: 1, features: '300 items, 1,500 invoices, 200 customers, payment QR on invoice', active: true },
+    { id: 'pro', name: 'Pro', price: 999, currency: 'PKR', interval: 'month', shops: 3, features: 'Unlimited + staff roles & PIN lock, bulk tools, Shopify sync, all invoice themes', active: true },
+    { id: 'lifetime', name: 'Lifetime', price: 14999, currency: 'PKR', interval: 'once', shops: 3, features: 'Everything in Pro, one-time payment', active: true }
+  ];
+  // What each plan unlocks inside the seller app (mirrors js/freemium.js in Billaura)
+  const LIMIT_ROWS = [
+    ['Items', '25', '300', 'Unlimited'], ['Invoices', '40', '1,500', 'Unlimited'], ['Customers', '20', '200', 'Unlimited'],
+    ['Expenses', '30', '1,000', 'Unlimited'], ['Suppliers', '10', '50', 'Unlimited'],
+    ['Payment QR on invoice', 0, 1, 1], ['Cloud sync', 1, 1, 1], ['Bulk price tools', 0, 0, 1], ['Shopify sync', 0, 0, 1],
+    ['PIN lock & staff roles', 0, 0, 1], ['All invoice themes', 0, 0, 1]
   ];
 
   function load(key, fallback) {
@@ -48,7 +55,7 @@
 
   // Ensure default password exists (plain for local MVP – change in Settings)
   if (!localStorage.getItem(KEYS.password)) {
-    localStorage.setItem(KEYS.password, 'hisably2026');
+    localStorage.setItem(KEYS.password, 'billaura2026');
   }
 
   const $ = (s, c = document) => c.querySelector(s);
@@ -63,6 +70,24 @@
   function formatDate(iso) {
     if (!iso) return '—';
     return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  function waLink(phone, text) {
+    let d = String(phone || '').replace(/\D/g, ''); if (!d) return '';
+    d = d.replace(/^0/, '92');
+    return 'https://wa.me/' + d + (text ? '?text=' + encodeURIComponent(text) : '');
+  }
+  function daysLeft(iso) { return Math.ceil((new Date(iso).getTime() - Date.now()) / 864e5); }
+  function reminderText(s, kind) {
+    const pay = [adminSettings.jazzcash && ('JazzCash ' + adminSettings.jazzcash), adminSettings.easypaisa && ('EasyPaisa ' + adminSettings.easypaisa)].filter(Boolean).join(' / ');
+    const hello = 'Hello ' + (s.ownerName || s.shopName) + ', ';
+    if (kind === 'trial') return hello + 'your Billaura trial for ' + s.shopName + ' ends on ' + formatDate(s.trialEndsAt) + '. Upgrade to keep all features.' + (pay ? ' Pay via ' + pay + ' and tap "I paid" in the app.' : '');
+    if (kind === 'lapsed') return hello + 'your Billaura plan for ' + s.shopName + ' has expired, so the shop is back on the Free plan. Renew to get everything back.' + (pay ? ' Pay via ' + pay + ' and tap "I paid" in the app.' : '');
+    return hello + 'your Billaura plan for ' + s.shopName + ' expires on ' + formatDate(s.paidUntil) + '.' + (pay ? ' To renew, pay via ' + pay + ' and tap "I paid" in the app.' : '');
+  }
+  function csvDownload(name, rows) {
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const blob = new Blob(['\ufeff' + rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   }
   function toast(msg) {
     const el = $('#toast');
@@ -108,12 +133,13 @@
     save(KEYS.settings, adminSettings);
   }
 
+  function pwIsDefault() { const p = localStorage.getItem(KEYS.password) || 'billaura2026'; return p === 'billaura2026' || p === 'hisably2026'; }
   // Auth
   function isLoggedIn() {
     return sessionStorage.getItem(KEYS.session) === '1';
   }
   function login(pw) {
-    const stored = localStorage.getItem(KEYS.password) || 'hisably2026';
+    const stored = localStorage.getItem(KEYS.password) || 'billaura2026';
     if (pw === stored) {
       sessionStorage.setItem(KEYS.session, '1');
       return true;
@@ -135,6 +161,7 @@
     $('#loginScreen').hidden = true;
     $('#adminShell').hidden = false;
     navigate('dashboard');
+    refreshPayments();
   }
 
   // Metrics
@@ -185,6 +212,22 @@
     bindPage();
   }
 
+  function attentionHTML() {
+    const rows = [];
+    const pend = paymentRequests.filter(r => (r.status || 'pending') === 'pending').length;
+    if (pend) rows.push(`<div class="attn-row info"><div class="t"><strong>${pend} payment request${pend > 1 ? 's' : ''} waiting</strong><small>Check the money arrived, then approve.</small></div><button class="btn btn-primary btn-sm" data-page="payments">Review</button></div>`);
+    shops.forEach(s => {
+      const st = shopState(s); let kind = '', cls = '', msg = '', d;
+      if (st === 'active' && s.paidUntil && s.planId !== 'lifetime' && (d = daysLeft(s.paidUntil)) <= 7) { kind = 'renew'; cls = 'warn'; msg = 'Plan ends ' + (d <= 0 ? 'today' : 'in ' + d + ' day' + (d > 1 ? 's' : '')); }
+      else if (st === 'trial' && s.trialEndsAt && (d = daysLeft(s.trialEndsAt)) <= 3) { kind = 'trial'; cls = 'warn'; msg = 'Trial ends ' + (d <= 0 ? 'today' : 'in ' + d + ' day' + (d > 1 ? 's' : '')); }
+      else if (st === 'lapsed' || st === 'trial-ended') { kind = 'lapsed'; cls = 'bad'; msg = st === 'lapsed' ? 'Paid plan expired' : 'Trial ended'; }
+      if (!kind) return;
+      const wa = waLink(s.ownerPhone, reminderText(s, kind));
+      rows.push(`<div class="attn-row ${cls}"><div class="t"><strong>${esc(s.shopName)}</strong><small>${msg}${s.ownerPhone ? ' · ' + esc(s.ownerPhone) : ''}</small></div>
+        ${wa ? `<a class="btn btn-wa btn-sm" href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}<button class="btn btn-secondary btn-sm" data-action="edit-shop" data-id="${esc(s.id)}">Open</button></div>`);
+    });
+    return rows.length ? `<div class="card"><div class="card-header"><h3 class="card-title">Needs attention (${rows.length})</h3></div><div class="attn">${rows.slice(0, 12).join('')}</div></div>` : '';
+  }
   function viewDashboard() {
     const m = metrics();
     return `
@@ -192,6 +235,8 @@
         <strong>Your side of Billaura.</strong> Manage every shop that uses your app, their plan, and status.
         ${cloudOn() ? 'Connected to Supabase – you are seeing every real shop.' : 'LOCAL MODE: data is stored only in this browser. Sign in with your admin email to manage real shops.'}
       </div>
+      ${pwIsDefault() && !cloudOn() ? '<div class="warnbar"><strong>Change the default password.</strong> Anyone who knows it can open this console. <button class="btn btn-secondary btn-sm" data-page="settings">Change now</button></div>' : ''}
+      ${attentionHTML()}
       <div class="stats">
         <div class="stat"><div class="stat-label">Total shops</div><div class="stat-value primary">${m.total}</div></div>
         <div class="stat"><div class="stat-label">Active</div><div class="stat-value success">${m.active}</div></div>
@@ -212,7 +257,7 @@
     if (!list.length) {
       return `<div class="empty">No shops yet. Add your first seller shop to start tracking subscriptions.</div>`;
     }
-    return `<div class="table-wrap"><table>
+    return `<div class="table-wrap"><table class="shops-t">
       <thead><tr>
         <th>Shop</th><th>Owner</th><th>Plan</th><th>Status</th><th>Paid until</th><th>Joined</th><th></th>
       </tr></thead>
@@ -221,12 +266,13 @@
           const plan = plans.find(p => p.id === s.planId);
           return `<tr>
             <td><strong>${esc(s.shopName)}</strong></td>
-            <td>${esc(s.ownerName || '—')}<br><span style="color:var(--muted);font-size:0.8rem">${esc(s.ownerPhone || '')}</span></td>
-            <td>${esc(plan ? plan.name : s.planId)}</td>
-            <td><span class="badge badge-${shopState(s) === 'active' ? 'active' : shopState(s) === 'trial' ? 'trial' : shopState(s) === 'paused' ? 'paused' : 'expired'}">${esc(shopState(s))}</span></td>
-            <td>${s.paidUntil ? formatDate(s.paidUntil) : (s.status === 'trial' && s.trialEndsAt ? 'trial → ' + formatDate(s.trialEndsAt) : '—')}</td>
-            <td>${formatDate(s.createdAt)}</td>
-            <td style="white-space:nowrap">
+            <td data-l="Owner">${esc(s.ownerName || '—')}<br><span style="color:var(--muted);font-size:0.8rem">${esc(s.ownerPhone || '')}</span></td>
+            <td data-l="Plan">${esc(plan ? plan.name : s.planId)}</td>
+            <td data-l="Status"><span class="badge badge-${shopState(s) === 'active' ? 'active' : shopState(s) === 'trial' ? 'trial' : shopState(s) === 'paused' ? 'paused' : 'expired'}">${esc(shopState(s))}</span></td>
+            <td data-l="Paid until">${s.paidUntil ? formatDate(s.paidUntil) : (s.status === 'trial' && s.trialEndsAt ? 'trial → ' + formatDate(s.trialEndsAt) : '—')}</td>
+            <td data-l="Joined">${formatDate(s.createdAt)}</td>
+            <td class="acts-td">
+              ${s.ownerPhone ? `<a class="btn btn-wa btn-sm" href="${waLink(s.ownerPhone, '')}" target="_blank" rel="noopener" title="WhatsApp">WA</a>` : ''}
               <button class="btn btn-secondary btn-sm" data-action="edit-shop" data-id="${esc(s.id)}">Edit</button>
               ${!isPaidActive(s) ? `<button class="btn btn-primary btn-sm" data-action="activate-shop" data-id="${esc(s.id)}">Activate +30d</button>` : `<button class="btn btn-danger btn-sm" data-action="deactivate-shop" data-id="${esc(s.id)}">Pause</button>`}
             </td>
@@ -236,6 +282,18 @@
     </table></div>`;
   }
 
+  let shopFilter = 'all';
+  function filteredShops() {
+    const q = (($('#shopSearch') || {}).value || '').trim().toLowerCase();
+    return shops.filter(s => {
+      const st = shopState(s);
+      if (shopFilter === 'active' && st !== 'active') return false;
+      if (shopFilter === 'trial' && st !== 'trial') return false;
+      if (shopFilter === 'lapsed' && !['expired', 'lapsed', 'trial-ended'].includes(st)) return false;
+      if (shopFilter === 'paused' && st !== 'paused') return false;
+      return !q || [s.shopName, s.ownerName, s.ownerPhone, s.ownerEmail, s.city].some(v => String(v || '').toLowerCase().includes(q));
+    });
+  }
   function viewShops() {
     return `
       <div class="card">
@@ -243,9 +301,11 @@
           <h3 class="card-title">All shops (${shops.length})</h3>
           <button class="btn btn-primary btn-sm" data-action="add-shop">Add shop</button>
         </div>
-        <div class="form-group" style="max-width:280px">
-          <input type="search" class="input" id="shopSearch" placeholder="Search shops..." />
+        <div class="form-group" style="max-width:320px">
+          <input type="search" class="input" id="shopSearch" placeholder="Search name, owner, phone, city..." />
         </div>
+        <div class="chips2" id="shopFilters">${[['all','All'],['active','Active'],['trial','Trial'],['lapsed','Expired'],['paused','Paused']].map(f => `<button class="chip2 ${shopFilter === f[0] ? 'on' : ''}" data-filter="${f[0]}">${f[1]}</button>`).join('')}
+          <button class="chip2" data-action="export-shops-csv" style="margin-left:auto">⬇ CSV</button></div>
         <div id="shopsTableWrap">${shopsTable(shops)}</div>
       </div>
     `;
@@ -254,6 +314,13 @@
   function viewPlans() {
     return `
       <div class="note">Set monthly prices in PKR / INR / BDT. Active shops on paid plans count toward MRR.</div>
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">What each plan unlocks in the app</h3></div>
+        <div class="table-wrap"><table class="limits"><thead><tr><th></th><th>Free</th><th>Basic</th><th>Pro / Lifetime</th></tr></thead><tbody>
+          ${LIMIT_ROWS.map(r => `<tr><td>${r[0]}</td>${r.slice(1).map(v => `<td>${v === 1 ? '<span class="yes">✓</span>' : v === 0 ? '<span class="no">—</span>' : v}</td>`).join('')}</tr>`).join('')}
+        </tbody></table></div>
+        <div class="text-sm" style="color:var(--muted);font-size:.78rem;margin-top:8px">These limits are built into the seller app and the database; the plan names and prices below are what you charge.</div>
+      </div>
       <div class="card">
         <div class="card-header">
           <h3 class="card-title">Plans</h3>
@@ -616,16 +683,10 @@
   function bindPage() {
     const search = $('#shopSearch');
     if (search) {
-      search.oninput = () => {
-        const q = search.value.trim().toLowerCase();
-        const filtered = shops.filter(s =>
-          (s.shopName || '').toLowerCase().includes(q) ||
-          (s.ownerName || '').toLowerCase().includes(q) ||
-          (s.ownerPhone || '').includes(q)
-        );
-        $('#shopsTableWrap').innerHTML = shopsTable(filtered);
-      };
+      search.oninput = () => { $('#shopsTableWrap').innerHTML = shopsTable(filteredShops()); };
     }
+    const fl = $('#shopFilters');
+    if (fl) fl.onclick = e => { const b = e.target.closest('[data-filter]'); if (!b) return; shopFilter = b.dataset.filter; fl.querySelectorAll('[data-filter]').forEach(x => x.classList.toggle('on', x === b)); $('#shopsTableWrap').innerHTML = shopsTable(filteredShops()); };
     const sf = $('#adminSettingsForm');
     if (sf) {
       sf.onsubmit = async (e) => {
@@ -714,7 +775,12 @@
       toast('Could not load payments: ' + (err.message || ''));
       paymentRequests = [];
     }
-    if (currentPage === 'payments') render();
+    updatePayDot();
+    if (currentPage === 'payments' || currentPage === 'dashboard') render();
+  }
+  function updatePayDot() {
+    const n = paymentRequests.filter(r => (r.status || 'pending') === 'pending').length;
+    const d = $('#payDot'); if (d) { d.textContent = n; d.hidden = !n; }
   }
 
   async function approvePayment(rid) {
@@ -833,12 +899,17 @@
         }
         break;
       case 'close-modal': closeModal(); break;
+      case 'export-shops-csv': {
+        csvDownload('billaura-shops-' + new Date().toISOString().slice(0, 10) + '.csv', [['Shop', 'Owner', 'Phone', 'Email', 'City', 'Plan', 'Status', 'Paid until', 'Trial ends', 'Joined', 'Notes']]
+          .concat(filteredShops().map(s => [s.shopName, s.ownerName, s.ownerPhone, s.ownerEmail, s.city, s.planId, shopState(s), s.paidUntil ? formatDate(s.paidUntil) : '', s.trialEndsAt ? formatDate(s.trialEndsAt) : '', formatDate(s.createdAt), s.notes])));
+        toast('CSV downloaded'); break;
+      }
       case 'export-admin': {
         const data = { shops, plans, adminSettings, exportedAt: new Date().toISOString() };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `hisably-admin-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `billaura-admin-${new Date().toISOString().slice(0, 10)}.json`;
         a.click();
         toast('Exported');
         break;
@@ -939,7 +1010,7 @@
     const cloudReady = !!(cloud && cloud.ready());
     const hint = $('#loginHint');
     if (cloudReady && hint) hint.innerHTML = 'Sign in with your <strong>platform_admin</strong> email and password.';
-    if (!cloudReady && hint) hint.innerHTML = 'Local mode (Supabase not configured). Default password: <strong>hisably2026</strong> – change it in Settings.';
+    if (!cloudReady && hint) hint.innerHTML = 'Local mode (Supabase not configured). Default password: <strong>billaura2026</strong> – change it in Settings.';
     if (isLoggedIn() && cloudReady) {
       // A page reload must not skip authentication: re-verify the real Supabase session
       let ok = false;
