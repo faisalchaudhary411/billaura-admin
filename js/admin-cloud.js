@@ -223,6 +223,7 @@
     ready,
     signIn,
     hasAdminSession,
+    client: sb,
     signOut,
     fetchShops,
     upsertShop,

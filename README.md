@@ -45,3 +45,6 @@ Open the admin URL in Chrome → menu → *Add to Home screen*. It uses the same
 
 ## Keep in sync with the seller app
 The limits shown on the Plans page mirror `js/freemium.js` in Billaura and the `enforce_plan_limit` trigger in `supabase/schema.sql`. If you change one, change all three.
+
+## v5: Announcements and Licence pages
+Needs `supabase/license.sql`, `announcements.sql` and the `license` Edge Function. See `supabase/LICENSE-SETUP.md`.

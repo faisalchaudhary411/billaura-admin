@@ -192,7 +192,10 @@
       payments: 'Payment requests',
       settings: 'Settings'
     };
-    $('#pageTitle').textContent = titles[page] || page;
+    const ex = window.AdminExtra && AdminExtra.pages.includes(page);
+    $('#pageTitle').textContent = (ex && AdminExtra.titles[page]) || titles[page] || page;
+    if (ex) { $('#sidebar').classList.remove('open'); AdminExtra.open(page); return; }
+    if (window.AdminExtra) AdminExtra.leave();
     $('#sidebar').classList.remove('open');
     render();
     if (page === 'payments') refreshPayments();
