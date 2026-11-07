@@ -165,6 +165,8 @@
       plan: r.plan_id,
       note: r.note,
       status: r.status,
+      promoCode: r.promo_code,
+      amountDue: r.amount_due,
       createdAt: r.created_at
     }));
   }

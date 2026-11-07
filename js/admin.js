@@ -20,7 +20,7 @@
   const LIMIT_ROWS = [
     ['Items', '25', '300', 'Unlimited'], ['Invoices', '40', '1,500', 'Unlimited'], ['Customers', '20', '200', 'Unlimited'],
     ['Expenses', '30', '1,000', 'Unlimited'], ['Suppliers', '10', '50', 'Unlimited'],
-    ['Payment QR on invoice', 0, 1, 1], ['Cloud sync', 1, 1, 1], ['Bulk price tools', 0, 0, 1], ['Shopify sync', 0, 0, 1],
+    ['Payment QR on invoice', 0, 1, 1], ['Cloud sync', 1, 1, 1], ['Bulk price tools', 0, 0, 1], ['Shopify sync', 0, 0, 1], ['Multiple branches & transfers', 0, 0, 1],
     ['PIN lock & staff roles', 0, 0, 1], ['All invoice themes', 0, 0, 1]
   ];
 
@@ -376,7 +376,7 @@
     const row = (r, actions) => `
       <tr>
         <td><strong>${esc(r.shopName || '—')}</strong><br><span style="color:var(--muted);font-size:0.8rem">${esc(r.email || '')}</span></td>
-        <td>${esc(r.plan)}</td>
+        <td>${esc(r.plan)}${r.amountDue != null ? `<br><span style="font-size:0.8rem">PKR ${esc(r.amountDue)}${r.promoCode ? ` <span class="badge badge-trial">${esc(r.promoCode)}</span>` : ''}</span>` : ''}</td>
         <td>${esc(r.note || '—')}</td>
         <td>${formatDate(r.createdAt)}</td>
         <td style="white-space:nowrap">${actions}</td>
