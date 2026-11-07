@@ -231,15 +231,17 @@
     const c = db(); if (!c) return;
     const f = $('#alertForm'), topic = () => String(new FormData(f).get('topic') || '').trim();
     const save = async v => { const { error } = await c.from('platform_settings').update({ ntfy_topic: v || null }).eq('id', 1); if (error) { toast('Failed: ' + error.message); return false; } S.alert.ntfy_topic = v || null; return true; };
-    f.onsubmit = async e => { e.preventDefault(); if (await save(topic())) { toast('Saved'); paint(); } };
+    f.onsubmit = async e => { e.preventDefault(); const t = topic(); if (t && t.length < 12) return toast('Topic is too easy to guess. Tap Generate for a private one (12+ characters).'); if (await save(t)) { toast('Saved'); paint(); } };
     $('#content').onclick = async e => {
       const b = e.target.closest('[data-x]'); if (!b) return;
       if (b.dataset.x === 'gen') { f.elements.topic.value = randTopic(); }
       else if (b.dataset.x === 'off') { if (await save('')) { toast('Alerts turned off'); paint(); } }
       else if (b.dataset.x === 'test') {
         const t = topic(); if (!t) return toast('Generate and save a topic first');
-        try { const r = await fetch('https://ntfy.sh/', { method: 'POST', body: JSON.stringify({ topic: t, title: 'Billaura test', message: 'Alerts work. You will get one of these for every payment request.', priority: 4, tags: ['white_check_mark'] }) }); toast(r.ok ? 'Test sent: check your phone' : 'ntfy said ' + r.status); }
-        catch (_) { toast('Could not reach ntfy.sh'); }
+        const u = 'https://ntfy.sh/' + encodeURIComponent(t) + '?title=' + encodeURIComponent('Billaura test') + '&priority=4&tags=white_check_mark';
+        const body = 'Alerts work. You will get one of these for every payment request.';
+        try { const r = await fetch(u, { method: 'POST', body }); toast(r.ok ? 'Test sent: check your phone' : 'ntfy said ' + r.status); }
+        catch (_) { try { await fetch(u, { method: 'POST', body, mode: 'no-cors' }); toast('Test sent (no reply readable): check your phone'); } catch (e2) { toast('Could not send: ' + ((e2 && e2.message) || 'network blocked')); } }
       }
     };
   }
